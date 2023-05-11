@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, ref, onMounted } from 'vue';
+import { reactive, ref, onMounted, nextTick, watch } from 'vue';
 import db from '@/utils/db.js';
 
 const vFocus = {
@@ -8,6 +8,7 @@ const vFocus = {
   }
 }
 
+const chatContainer = ref(null);
 const inputUsername = ref("");
 const inputMessage = ref("");
 const state = reactive({
@@ -16,7 +17,7 @@ const state = reactive({
 });
 
 const Login = () => {
-  if (inputUsername.value != "" || inputUsername.value != null) {
+  if (inputUsername.value != "" || inputUsername.value != null || inputUsername.value !== undefined) {
     state.username = inputUsername.value;
     inputUsername.value = "";
   }
@@ -29,22 +30,35 @@ const Logout = () => {
 const SendMessage = () => {
   const messagesRef = db.database().ref("messages");
 
-  if (inputMessage.value === "" || inputMessage.value === null) {
+  if (inputMessage.value.trim() === "" || inputMessage.value === null) {
     return;
   }
 
   const message = {
     username: state.username,
-    content: inputMessage.value
+    content: inputMessage.value.trim()
   }
+
   messagesRef.push(message);
   inputMessage.value = "";
+
+  nextTick(() => {
+    scrollDown();
+  })
 }
 
 const scrollDown = () => {
-  const body = document.body;
-  body.scrollIntoView({ block: 'end', behavior: 'smooth' });
+  document.documentElement.scrollTop = document.documentElement.scrollHeight;
 }
+
+watch(
+  chatContainer,
+  value => {
+    if (value !== null) {
+      scrollDown();
+    }
+  }
+)
 
 onMounted(() => {
   const messagesRef = db.database().ref('messages');
@@ -86,7 +100,7 @@ onMounted(() => {
       </div>
     </form>
   </div>
-  <div class="view chat" v-else>
+  <div class="view chat" v-else ref="chatContainer">
     <header>
       <button class="logout" @click="Logout">Logout</button>
       <h1>Welcome, {{ state.username }}</h1>
@@ -115,7 +129,7 @@ onMounted(() => {
           placeholder="Write a message..."
           v-focus
         />
-        <input type="submit" value="Send" @click="scrollDown" />
+        <input type="submit" value="Send" />
       </form>
     </footer>
   </div>
@@ -133,7 +147,7 @@ onMounted(() => {
   box-sizing: border-box;
 }
 
-html,
+document.documentElement,
 body {
   scroll-behavior: smooth;  
 }
